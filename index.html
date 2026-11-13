@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aionin1</title>
+<meta name="description" content="Aionin1: a free overlay for Aion 2 Global with a party damage meter, pet compass, event timers and gear upgrade planner.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500;62..125,700;62..125,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* A printed spec sheet: cool grey paper, black ink, flat dark plates for the HUD, one flat yellow for the download. */
+  --paper: #e8eaec;
+  --ink: #121417;
+  --soft: #4b5059;
+  --rule: #c3c7cd;
+  --plate: #1a1d23;
+  --mark: #ffd22e;
+  --display: "Archivo", "Arial Narrow", Arial, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  --mono: "IBM Plex Mono", Consolas, monospace;
+  /* layout: a ruled grid; numbered sections with the label column on the left and content on the right */
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+a { color: var(--ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+img { max-width: 100%; height: auto; display: block; }
+.wrap { width: min(1140px, 100% - 40px); margin: 0 auto; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+p { margin: 0; }
+.mono { font-family: var(--mono); }
+
+/* top bar */
+.top { border-bottom: 1px solid var(--ink); }
+.top .wrap { display: flex; align-items: center; gap: 28px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 800 1.3rem/1 var(--display); font-stretch: 85%; letter-spacing: .01em; }
+.brand svg { width: 26px; height: 26px; }
+.top nav { display: flex; gap: 24px; margin-left: auto; font-size: .95rem; }
+.top nav a { text-decoration: none; }
+.top nav a:hover { text-decoration: underline; }
+.btn { display: inline-flex; align-items: center; gap: 12px; height: 46px; padding: 0 20px; border: 1.5px solid var(--ink); border-radius: 2px;
+       font: 600 1rem/1 var(--body); text-decoration: none; white-space: nowrap; color: var(--ink); }
+.btn-get { background: var(--mark); }
+.btn-get:hover { background: #ffdc55; }
+.btn-plain { background: transparent; }
+.btn-plain:hover { background: #dde0e3; }
+.top .btn { height: 38px; padding: 0 14px; font-size: .92rem; }
+@media (max-width: 720px) { .top nav { display: none; } .top .btn { margin-left: auto; } }
+
+/* opener */
+.open { padding: 64px 0 40px; }
+.open .wrap { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 48px; align-items: end; }
+.open h1 { font-size: clamp(2.6rem, 6.4vw, 5.2rem); font-weight: 800; font-stretch: 72%; line-height: .95; letter-spacing: -.01em; text-transform: uppercase; }
+.open .lede { margin-top: 22px; max-width: 36em; color: var(--soft); font-size: 1.1rem; }
+.open .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.specs { margin: 0; border-top: 1.5px solid var(--ink); }
+.specs div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: .95rem; }
+.specs dt { color: var(--soft); }
+.specs dd { margin: 0; font-family: var(--mono); font-weight: 500; text-align: right; }
+@media (max-width: 860px) { .open .wrap { grid-template-columns: minmax(0, 1fr); gap: 32px; align-items: start; } .open { padding-top: 40px; } }
+
+/* the HUD viewer: the real overlay on a flat plate, with its sections as plain tabs */
+.viewer { padding-bottom: 72px; }
+.tabs { display: flex; flex-wrap: wrap; border-bottom: 1.5px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; padding: 12px 16px 10px; margin-bottom: -1.5px; cursor: pointer;
+               font: 600 .95rem/1 var(--body); color: var(--soft); border-bottom: 3px solid transparent; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.plate { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); background: var(--plate); color: #d9dce2; }
+.plate .pic { padding: 36px; display: grid; place-items: center; min-height: 380px; }
+.plate .pic img { width: min(100%, 560px); }
+.plate .what { padding: 36px 36px 36px 0; display: grid; align-content: center; gap: 12px; }
+.plate .what .mono { color: var(--mark); font-size: .82rem; letter-spacing: .06em; text-transform: uppercase; }
+.plate .what h2 { font-size: 1.7rem; font-weight: 700; font-stretch: 85%; color: #fff; }
+.plate .what p { color: #b9bec8; }
+@media (max-width: 860px) { .plate { grid-template-columns: minmax(0, 1fr); } .plate .pic { padding: 18px; min-height: 0; } .plate .what { padding: 0 20px 24px; } }
+
+/* numbered sections */
+.sec { border-top: 1.5px solid var(--ink); padding: 56px 0 64px; }
+.sec .wrap { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 40px; }
+.sec .side .mono { font-size: .82rem; color: var(--soft); }
+.sec .side h2 { margin-top: 8px; font-size: 2rem; font-weight: 800; font-stretch: 75%; line-height: 1; text-transform: uppercase; }
+@media (max-width: 860px) { .sec .wrap { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
+
+.feat { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 36px; padding: 28px 0; border-top: 1px solid var(--rule); }
+.feat:first-child { border-top: 0; padding-top: 0; }
+.feat h3 { font-size: 1.5rem; font-weight: 700; font-stretch: 85%; }
+.feat p { margin-top: 10px; color: var(--soft); }
+.feat ul { margin: 14px 0 0; padding-left: 18px; display: grid; gap: 7px; }
+.feat li::marker { content: "– "; }
+.feat .shot { background: var(--plate); padding: 18px; }
+@media (max-width: 960px) { .feat { grid-template-columns: minmax(0, 1fr); gap: 18px; } }
+.tiers { display: flex; flex-wrap: wrap; margin-top: 16px; border: 1px solid var(--ink); width: fit-content; max-width: 100%; }
+.tiers span { padding: 6px 10px; background: var(--plate); font: 600 .85rem/1 var(--mono); border-right: 1px solid #000; }
+.tiers span:last-child { border-right: 0; }
+
+.list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--ink); }
+.list div { padding: 18px 20px 20px 0; border-bottom: 1px solid var(--rule); }
+.list div:nth-child(odd) { padding-right: 28px; }
+.list h3 { font-size: 1.15rem; font-weight: 700; font-stretch: 90%; }
+.list p { margin-top: 6px; color: var(--soft); font-size: .97rem; }
+@media (max-width: 640px) { .list { grid-template-columns: minmax(0, 1fr); } }
+
+ol.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; border-top: 1px solid var(--ink); }
+ol.steps li { counter-increment: s; display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px 16px; padding: 20px 0; border-bottom: 1px solid var(--rule); }
+ol.steps li::before { content: counter(s, decimal-leading-zero); font: 600 1.1rem/1.4 var(--mono); }
+ol.steps h3 { font-size: 1.2rem; font-weight: 700; font-stretch: 90%; }
+ol.steps p { margin-top: 6px; color: var(--soft); }
+ol.steps .note { margin-top: 10px; padding: 10px 12px; border-left: 3px solid var(--ink); background: #dde0e3; color: var(--ink); font-size: .93rem; }
+.keys { margin-top: 36px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .97rem; }
+caption { text-align: left; font: 600 .82rem/1 var(--mono); color: var(--soft); padding-bottom: 10px; }
+th, td { text-align: left; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th { border-bottom: 1.5px solid var(--ink); font: 600 .8rem/1 var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--soft); }
+td:first-child { width: 170px; font-family: var(--mono); font-weight: 500; white-space: nowrap; }
+
+.faq { border-top: 1px solid var(--ink); }
+details { border-bottom: 1px solid var(--rule); }
+summary { cursor: pointer; list-style: none; padding: 16px 0; font-weight: 600; font-size: 1.05rem; display: flex; justify-content: space-between; gap: 16px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font: 500 1.2rem/1 var(--mono); }
+details[open] summary::after { content: "−"; }
+details > div { padding: 0 0 18px; color: var(--soft); display: grid; gap: 10px; max-width: 44rem; }
+
+.end { background: var(--plate); color: #fff; }
+.end .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; padding: 44px 0; }
+.end h2 { font-size: clamp(1.8rem, 3.6vw, 2.6rem); font-weight: 800; font-stretch: 72%; text-transform: uppercase; }
+.end .btn { border-color: var(--mark); }
+footer { padding: 28px 0 44px; font-size: .88rem; color: var(--soft); }
+footer .wrap { display: grid; gap: 10px; }
+footer .row { display: flex; flex-wrap: wrap; gap: 20px; }
+footer a { color: var(--soft); }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Aionin1 home">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 20.8 6.6v10.8L12 22.4 3.2 17.4V6.6z" fill="#121417"/><path d="M6.6 17.6 12 5.6l5.4 12" fill="none" stroke="#ffd22e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 14.3 12.4 13.4v4.2" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      AIONIN1
+    </a>
+    <nav aria-label="Page sections"><a href="#features">Features</a><a href="#install">Install</a><a href="#faq">FAQ</a><a href="https://github.com/jordan-cyber-yep/aionin1/releases">Releases</a></nav>
+    <a class="btn btn-get" href="https://github.com/jordan-cyber-yep/aionin1/releases/latest/download/Aionin1-Setup.exe">Download</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="open">
+    <div class="wrap">
+      <div>
+        <h1>A damage meter, pet compass and event timers for Aion 2</h1>
+        <p class="lede">Aionin1 is one small bar that sits over the game. It shows your party's DPS, points you to your next unfinished pet, counts down every event on your server's clock, and tells you which gear lines to reroll.</p>
+        <div class="cta">
+          <a class="btn btn-get" href="https://github.com/jordan-cyber-yep/aionin1/releases/latest/download/Aionin1-Setup.exe">Download for Windows</a>
+          <a class="btn btn-plain" href="#install">How to install</a>
+        </div>
+      </div>
+      <dl class="specs">
+        <div><dt>Price</dt><dd>Free</dd></div>
+        <div><dt>Game</dt><dd>Aion 2 Global, NA &amp; EU</dd></div>
+        <div><dt>System</dt><dd>Windows 10 / 11</dd></div>
+        <div><dt>Installer</dt><dd>Aionin1-Setup.exe, 27 MB</dd></div>
+        <div><dt>Also needs</dt><dd>Npcap (free)</dd></div>
+        <div><dt>Account</dt><dd>None</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="viewer" aria-label="The HUD">
+    <div class="wrap">
+      <div class="tabs" role="tablist" aria-label="HUD sections">
+        <button type="button" role="tab" id="t-meter" aria-selected="true" aria-controls="view" data-k="meter">Damage meter</button>
+        <button type="button" role="tab" id="t-pets" aria-selected="false" aria-controls="view" data-k="pets">Pet compass</button>
+        <button type="button" role="tab" id="t-timers" aria-selected="false" aria-controls="view" data-k="timers">Event timers</button>
+        <button type="button" role="tab" id="t-upgrades" aria-selected="false" aria-controls="view" data-k="upgrades">Gear upgrades</button>
+        <button type="button" role="tab" id="t-grind" aria-selected="false" aria-controls="view" data-k="grind">Grind</button>
+      </div>
+      <div class="plate" id="view" role="tabpanel" aria-labelledby="t-meter">
+        <div class="pic"><img id="view-img" src="img/meter-kill.png" width="880" height="660" alt="The damage meter after a dungeon boss kill"></div>
+        <div class="what">
+          <span class="mono" id="view-tag">After a boss kill</span>
+          <h2 id="view-title">Everyone's DPS, CP and percentile</h2>
+          <p id="view-text">Each player's damage, their combat power from the official armory, and how their DPS ranks against the same class at a similar CP on that boss.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="features">
+    <div class="wrap">
+      <div class="side"><span class="mono">01</span><h2>What it does</h2></div>
+      <div>
+        <div class="feat">
+          <div>
+            <h3>Damage meter</h3>
+            <p>Every player's DPS, total damage and share of the fight, with their class and combat power.</p>
+            <ul>
+              <li>After a dungeon boss kill, a percentile next to each name, compared with the same class at a similar CP.</li>
+              <li>Boss health and a kill-time estimate while you fight, and your ping to the server.</li>
+              <li>An invulnerable phase or a run-out doesn't split the fight in two.</li>
+              <li>Copy a summary for party chat.</li>
+            </ul>
+            <div class="tiers" aria-label="Percentile colors">
+              <span style="color:#b4bac4">0–24</span><span style="color:#4ade6b">25+</span><span style="color:#4aa3ff">50+</span><span style="color:#c27cff">75+</span><span style="color:#ff9b3d">95+</span><span style="color:#ff7cc4">99</span><span style="color:#f2d27a">100</span>
+            </div>
+          </div>
+          <div class="shot"><img src="img/meter-kill.png" width="880" height="660" alt="Damage meter rows with DPS, combat power and percentile chips" loading="lazy"></div>
+        </div>
+        <div class="feat">
+          <div>
+            <h3>Pet compass</h3>
+            <p>Picks the densest known spawn area for each unfinished pet on your map and points you there, with the distance in meters.</p>
+            <ul>
+              <li>Inside the area it says <b>Here</b>, so you can run between spread-out mobs.</li>
+              <li>Counts the souls each pet still needs to reach Lv3.</li>
+              <li>Sort by closest, fewest souls left, or name.</li>
+            </ul>
+          </div>
+          <div class="shot"><img src="img/pets.png" width="880" height="600" alt="The pet compass saying Here inside the best farming area" loading="lazy"></div>
+        </div>
+        <div class="feat">
+          <div>
+            <h3>Event timers</h3>
+            <p>Shugo Festival, Dimensional Invasion, Spacetime Rift and the daily and weekly resets, counted down on your region's server clock, daylight saving included.</p>
+            <ul>
+              <li>Logos on the bar light up 5 minutes before an event and stay lit while you can join.</li>
+              <li>An optional chime before the events you pick.</li>
+            </ul>
+          </div>
+          <div class="shot"><img src="img/timers.png" width="880" height="600" alt="Event timers with countdowns" loading="lazy"></div>
+        </div>
+        <div class="feat">
+          <div>
+            <h3>Gear upgrades</h3>
+            <p>Reads your equipped gear from the official armory and grades every piece from D to S+ by your class's PvE or PvP priorities.</p>
+            <ul>
+              <li><b>To do</b>: the exact line to reroll and what to aim for.</li>
+              <li><b>Keep</b>: already S+, with what would make it perfect later.</li>
+              <li><b>Perfect</b>: every line is the best its slot can roll.</li>
+            </ul>
+          </div>
+          <div class="shot"><img src="img/upgrades.png" width="880" height="760" alt="Gear upgrades with a reroll plan" loading="lazy"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap">
+      <div class="side"><span class="mono">02</span><h2>Also</h2></div>
+      <div class="list">
+        <div><h3>Grind tracker</h3><p>Kinah, Abyss Points, kills, pet souls and drops per hour. Pauses itself when you go idle.</p></div>
+        <div><h3>Activities</h3><p>Duty quests, keys and weekly tasks for each of your characters, read from the game.</p></div>
+        <div><h3>Click-through</h3><p>Never takes focus from the game. Lock it and every click goes to Aion 2.</p></div>
+        <div><h3>Display options</h3><p>Bar styles, colors, fonts, sizes, which columns show and how see-through it is.</p></div>
+        <div><h3>Updates itself</h3><p>An Update button appears on the HUD when a new version is out.</p></div>
+        <div><h3>No account</h3><p>Your fights stay on your PC unless you choose to share boss kills anonymously.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="install">
+    <div class="wrap">
+      <div class="side"><span class="mono">03</span><h2>Install</h2></div>
+      <div>
+        <ol class="steps">
+          <li><div><h3>Download and run the installer</h3>
+            <p>Get <a href="https://github.com/jordan-cyber-yep/aionin1/releases/latest/download/Aionin1-Setup.exe">Aionin1-Setup.exe</a> and run it. It installs for your Windows user, with no admin prompt.</p>
+            <p class="note">The installer isn't code-signed yet, so Windows may say "Windows protected your PC". Click <b>More info</b>, then <b>Run anyway</b>.</p></div></li>
+          <li><div><h3>Install Npcap</h3>
+            <p>Aionin1 reads the game's traffic through <a href="https://npcap.com/#download">Npcap</a>, the free capture driver Wireshark uses. Install it with the default options. The installer reminds you if it's missing.</p></div></li>
+          <li><div><h3>Start it before you log in</h3>
+            <p>Open Aionin1, then enter the world. Drag the bar where you want it and resize it from any edge.</p>
+            <p class="note">Press <span class="mono">Alt+Shift+F10</span> to lock it, so every click goes to the game.</p></div></li>
+        </ol>
+        <div class="keys">
+          <table>
+            <caption>Hotkeys (change them in Settings)</caption>
+            <thead><tr><th scope="col">Keys</th><th scope="col">Action</th></tr></thead>
+            <tbody>
+              <tr><td>Alt+Shift+F10</td><td>Lock or unlock the HUD</td></tr>
+              <tr><td>Alt+Shift+F9</td><td>Reset the damage meter</td></tr>
+              <tr><td>Alt+Shift+F11</td><td>Step the meter through DPS, damage, share and Grind</td></tr>
+              <tr><td>Alt+Shift+F7</td><td>Next HUD section</td></tr>
+              <tr><td>Alt+Shift+F12</td><td>Show or hide the HUD</td></tr>
+              <tr><td>Alt+Shift+F8</td><td>Open the full app, or go back to the HUD</td></tr>
+              <tr><td>Alt+Shift+F6</td><td>Start or stop a Grind session</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="faq">
+    <div class="wrap">
+      <div class="side"><span class="mono">04</span><h2>FAQ</h2></div>
+      <div class="faq">
+        <details>
+          <summary>Is it allowed? Can I get in trouble?</summary>
+          <div><p>Aionin1 only reads the network traffic the game already sends to your PC. It doesn't change game files, inject anything into the client or play for you.</p>
+          <p>NCSOFT hasn't approved any third-party meter, so like every overlay of this kind it's used at your own risk.</p></div>
+        </details>
+        <details>
+          <summary>Will it lag my game?</summary>
+          <div><p>It reads a copy of traffic that has already arrived, on its own threads, and never sits between you and the server. The HUD only redraws what changed.</p></div>
+        </details>
+        <details>
+          <summary>What does it send, and where?</summary>
+          <div><p>It looks up combat power and gear on the official Aion 2 armory, and checks GitHub for updates.</p>
+          <p>If you choose to share boss kills, each dungeon boss kill is sent anonymously to build the percentiles: the boss, each player's class, CP, DPS and the fight length. No names. The meter asks once, and you can change it in Settings.</p></div>
+        </details>
+        <details>
+          <summary>Why does it need Npcap?</summary>
+          <div><p>Npcap is the standard Windows capture driver, the same one Wireshark uses. It's how Aionin1 sees the combat, pet and position data the game sends.</p></div>
+        </details>
+        <details>
+          <summary>Does it work with ExitLag or other boosters?</summary>
+          <div><p>Yes. With a booster the ping shows "Booster", since the real server ping happens on the booster's side.</p></div>
+        </details>
+        <details>
+          <summary>Mac, Linux or Steam Deck?</summary>
+          <div><p>Windows only for now.</p></div>
+        </details>
+        <details>
+          <summary>I found a bug or want a feature</summary>
+          <div><p>Open an issue on <a href="https://github.com/jordan-cyber-yep/aionin1/issues">GitHub</a>. Every version's changes are in the <a href="https://github.com/jordan-cyber-yep/aionin1/releases">release notes</a>.</p></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="end">
+    <div class="wrap">
+      <h2>Free. Windows. NA &amp; EU.</h2>
+      <a class="btn btn-get" href="https://github.com/jordan-cyber-yep/aionin1/releases/latest/download/Aionin1-Setup.exe">Download Aionin1</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="row"><a href="https://github.com/jordan-cyber-yep/aionin1/releases">All releases</a><a href="https://github.com/jordan-cyber-yep/aionin1/issues">Report a bug</a><a href="https://github.com/jordan-cyber-yep/aionin1/blob/main/LICENSE">License</a><a href="https://github.com/jordan-cyber-yep/aionin1#credits-and-license">Credits</a></div>
+    <p>A free fan project, not affiliated with NCSOFT. AION is a trademark of NCSOFT Corporation; game data, names and class emblems belong to NCSOFT. Screenshots show the HUD with example players.</p>
+  </div>
+</footer>
+
+<script>
+const VIEWS = {
+  meter: ["meter-kill", "After a boss kill", "Everyone's DPS, CP and percentile",
+          "Each player's damage, their combat power from the official armory, and how their DPS ranks against the same class at a similar CP on that boss.",
+          "The damage meter after a dungeon boss kill"],
+  pets: ["pets", "Pet compass", "Says Here when you're in the spot",
+         "Inside the best farming area for your next pet it stops pointing at the exact center, so you can run between the mobs.",
+         "The pet compass saying Here inside the best farming area"],
+  timers: ["timers", "Event timers", "Every event on your server's clock",
+           "NA West shown. Daylight saving is handled, so the Rift countdown stays right after the clocks change.",
+           "Event timers with countdowns on the server clock"],
+  upgrades: ["upgrades", "Gear upgrades", "What to reroll, and what to keep",
+             "Every piece colored by what to do with it. The top card lists the exact lines to reroll and what to aim for.",
+             "The gear upgrades plan with reroll steps"],
+  grind: ["grind", "Grind", "Your farming session, per hour",
+          "Kinah, Abyss Points, kills, pet souls and drops per hour. Click Kills or Pet souls for the breakdown by mob.",
+          "The Grind tracker with Kinah, kills and drops per hour"],
+};
+const tabs = document.querySelectorAll('.tabs [role="tab"]');
+tabs.forEach(tab => tab.addEventListener("click", () => {
+  const [img, tag, title, text, alt] = VIEWS[tab.dataset.k];
+  tabs.forEach(t => t.setAttribute("aria-selected", String(t === tab)));
+  document.getElementById("view").setAttribute("aria-labelledby", tab.id);
+  const pic = document.getElementById("view-img");
+  pic.src = `img/${img}.png`;
+  pic.alt = alt;
+  document.getElementById("view-tag").textContent = tag;
+  document.getElementById("view-title").textContent = title;
+  document.getElementById("view-text").textContent = text;
+}));
+</script>
+</body>
+</html>
